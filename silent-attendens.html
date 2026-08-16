@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Silent Attendens — A Game by Aazhy Studios</title>
+<meta name="description" content="Silent Attendens is a psychological horror mystery set inside a haunted Indian college hostel. A game by Aazhy Studios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300..700&family=JetBrains+Mono:wght@300..600&display=swap" rel="stylesheet">
+<style>
+  /* ===================================================================
+     BASE DESIGN SYSTEM — carried over 1:1 from the main Aazhy Studios site
+     (variables, nav, cursor, grain, reveal, footer, buttons)
+     =================================================================== */
+  :root{
+    --bg:#0B0F19;
+    --bg-alt:#0d1220;
+    --surface:#111827;
+    --surface2:#141b2c;
+    --cyan:#373d3d;
+    --gold:#b22121;
+    --white:#6d1b1b;
+    --line:rgba(1, 2, 5, 0.08);
+    --line-strong:rgba(245,247,250,0.14);
+    /* game-page-only addition: used sparingly, never as a wash */
+    --blood:#7a1620;
+    --blood-bright:#c22233;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+
+  body{
+    background:var(--bg);
+    color:var(--white);
+    font-family:'Inter',sans-serif;
+    overflow-x:hidden;
+    cursor:none;
+  }
+  @media (max-width:900px){ body{cursor:auto;} }
+
+  h1,h2,h3,.display{ font-family:'Space Grotesk',sans-serif; }
+  .mono{ font-family:'JetBrains Mono',monospace; letter-spacing:0.08em; }
+  ::selection{ background:var(--cyan); color:#00131a; }
+  a{color:inherit; text-decoration:none;}
+  ul{list-style:none;}
+  img{max-width:100%; display:block;}
+  button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit;}
+  section{position:relative;}
+
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-track{ background:var(--bg); }
+  ::-webkit-scrollbar-thumb{ background:linear-gradient(var(--cyan), var(--gold)); border-radius:4px; }
+
+  #cursor-glow{
+    position:fixed; top:0; left:0; width:420px; height:420px; border-radius:50%;
+    background:radial-gradient(circle, rgba(0,229,255,0.10) 0%, rgba(0,229,255,0.03) 40%, transparent 70%);
+    pointer-events:none; z-index:2; transform:translate(-50%,-50%); transition:opacity .3s ease; will-change:transform;
+  }
+  #cursor-dot{
+    position:fixed; top:0; left:0; width:8px; height:8px; border-radius:50%; background:var(--cyan);
+    pointer-events:none; z-index:9999; transform:translate(-50%,-50%); box-shadow:0 0 12px 2px rgba(0,229,255,0.8);
+    transition:transform .15s ease, background .2s ease;
+  }
+  @media (max-width:900px){ #cursor-glow,#cursor-dot{display:none;} }
+
+  #grain{
+    position:fixed; inset:0; z-index:5; pointer-events:none; opacity:0.055; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .vignette{ position:fixed; inset:0; z-index:4; pointer-events:none; box-shadow:inset 0 0 240px rgba(0,0,0,0.82); }
+  /* subtle flicker layer used only on this page, very low opacity */
+  #flicker{ position:fixed; inset:0; z-index:3; pointer-events:none; background:#000; opacity:0; }
+
+  #fog-canvas{ position:absolute; inset:0; width:100%; height:100%; }
+
+  /* ---------- nav (unchanged from main site) ---------- */
+  header{
+    position:fixed; top:0; left:0; width:100%; z-index:1000;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px clamp(20px,5vw,64px);
+    transition:background .4s ease, padding .4s ease, border-color .4s ease;
+    border-bottom:1px solid transparent;
+  }
+  header.scrolled{
+    background:rgba(11,15,25,0.82); backdrop-filter:blur(16px) saturate(140%); -webkit-backdrop-filter:blur(16px) saturate(140%);
+    padding:14px clamp(20px,5vw,64px); border-bottom:1px solid var(--line);
+  }
+  .logo{ display:flex; align-items:center; gap:10px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:18px; letter-spacing:0.02em;}
+  .logo span.tamil{ color:var(--cyan); font-weight:400; font-size:15px; opacity:.85;}
+  .logo .mark{
+    width:34px;height:34px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, var(--cyan), transparent 60%), radial-gradient(circle at 70% 70%, var(--gold), transparent 60%), #0e1524;
+    border:1px solid var(--line-strong); box-shadow:0 0 14px rgba(0,229,255,0.25);
+  }
+  nav.links{ display:flex; gap:30px; }
+  nav.links a{
+    font-size:13.5px; font-weight:500; letter-spacing:0.03em; text-transform:uppercase;
+    color:rgba(245,247,250,0.72); position:relative; padding:6px 0; transition:color .3s ease;
+  }
+  nav.links a::after{
+    content:''; position:absolute; left:0; bottom:0; height:1px; width:0;
+    background:linear-gradient(90deg,var(--cyan),var(--gold)); transition:width .35s ease;
+  }
+  nav.links a:hover, nav.links a.active{ color:var(--white); }
+  nav.links a:hover::after, nav.links a.active::after{ width:100%; }
+
+  .cta-btn{
+    font-size:13px; font-weight:600; letter-spacing:0.03em; text-transform:uppercase;
+    padding:12px 24px; border-radius:100px; border:1px solid var(--line-strong);
+    background:rgba(245,247,250,0.03); display:inline-flex; align-items:center; gap:8px;
+    transition:border-color .3s ease, background .3s ease, transform .25s ease, box-shadow .3s ease; white-space:nowrap;
+  }
+  .cta-btn:hover{ border-color:var(--cyan); box-shadow:0 0 24px rgba(0,229,255,0.25); transform:translateY(-2px); }
+  .cta-btn.solid{ background:linear-gradient(120deg,var(--cyan),#800f0f); color:#001318; border-color:transparent; font-weight:700;}
+  .cta-btn.solid:hover{ box-shadow:0 0 30px rgb(255, 0, 0); }
+
+  #menu-toggle{ display:none; }
+  .mobile-panel{
+    position:fixed; inset:0; background:rgba(8,11,18,0.98); backdrop-filter:blur(10px); z-index:999;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px;
+    transform:translateY(-100%); transition:transform .5s cubic-bezier(.77,0,.18,1);
+  }
+  .mobile-panel.open{ transform:translateY(0); }
+  .mobile-panel a{ font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:500; }
+  .mobile-panel a span{ color:var(--cyan); font-size:14px; margin-right:10px; font-family:'JetBrains Mono';}
+
+  @media (max-width:960px){
+    nav.links{ display:none; }
+    header .cta-btn.solid.desktop-only{ display:none; }
+    #menu-toggle{ display:flex; width:40px; height:40px; align-items:center; justify-content:center; flex-direction:column; gap:5px; z-index:1001; }
+    #menu-toggle span{ width:22px; height:1.5px; background:var(--white); transition:.35s; }
+    #menu-toggle.open span:nth-child(1){ transform:translateY(6.5px) rotate(45deg); }
+    #menu-toggle.open span:nth-child(2){ opacity:0; }
+    #menu-toggle.open span:nth-child(3){ transform:translateY(-6.5px) rotate(-45deg); }
+  }
+
+  /* ---------- breadcrumb (new, minimal, matches label style) ---------- */
+  .breadcrumb{
+    position:fixed; top:78px; left:0; width:100%; z-index:900; padding:0 clamp(20px,5vw,64px);
+    font-family:'JetBrains Mono'; font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+    color:rgba(245,247,250,0.4); pointer-events:none; transition:opacity .4s ease, transform .4s ease;
+  }
+  .breadcrumb a{ pointer-events:auto; color:rgba(245,247,250,0.55); }
+  .breadcrumb a:hover{ color:var(--cyan); }
+  .breadcrumb.hide{ opacity:0; transform:translateY(-8px); }
+
+  /* ---------- reveal (unchanged) ---------- */
+  .reveal{ opacity:0; transform:translateY(36px); transition:opacity 1s cubic-bezier(.16,1,.3,1), transform 1s cubic-bezier(.16,1,.3,1); }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+  .reveal-delay-1.in{ transition-delay:.12s; }
+  .reveal-delay-2.in{ transition-delay:.24s; }
+  .reveal-delay-3.in{ transition-delay:.36s; }
+
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.22em; text-transform:uppercase;
+    color:var(--cyan); display:flex; align-items:center; gap:10px; margin-bottom:18px;
+  }
+  .eyebrow::before{ content:''; width:26px; height:1px; background:var(--cyan); display:inline-block; }
+  .eyebrow.blood{ color:var(--blood-bright); }
+  .eyebrow.blood::before{ background:var(--blood-bright); }
+
+  .section-inner{ max-width:1360px; margin:0 auto; padding:0 clamp(20px,5vw,64px); }
+  .section-pad{ padding:140px 0; }
+  .section-title{ font-size:clamp(30px,5vw,54px); font-weight:600; letter-spacing:-0.01em; max-width:760px; }
+  .section-sub{ margin-top:16px; font-size:16px; color:rgba(245,247,250,0.6); max-width:520px; font-weight:300; }
+  .title-row{ display:flex; justify-content:space-between; align-items:flex-end; gap:40px; flex-wrap:wrap; margin-bottom:70px; }
+
+  .glitch{ position:relative; display:inline-block; }
+  .glitch:hover::before, .glitch:hover::after{ content:attr(data-text); position:absolute; top:0; left:0; width:100%; overflow:hidden; }
+  .glitch:hover::before{ color:var(--cyan); clip-path:inset(0 0 55% 0); transform:translate(-2px,-2px); animation:glitchTop .35s steps(2,end) infinite; }
+  .glitch:hover::after{ color:var(--blood-bright); clip-path:inset(55% 0 0 0); transform:translate(2px,2px); animation:glitchBot .35s steps(2,end) infinite; }
+  @keyframes glitchTop{ 0%{transform:translate(-2px,-2px);} 50%{transform:translate(2px,-1px);} 100%{transform:translate(-1px,-2px);} }
+  @keyframes glitchBot{ 0%{transform:translate(2px,2px);} 50%{transform:translate(-2px,1px);} 100%{transform:translate(1px,2px);} }
+
+  .magnetic{ display:inline-block; will-change:transform; }
+
+  /* ===================================================================
+     GAME PAGE — SECTIONS
+     =================================================================== */
+
+  /* ---------- GAME HERO ---------- */
+  #game-hero{ height:100vh; min-height:760px; display:flex; align-items:flex-end; overflow:hidden; background:#030405; }
+  #hero-bg{ position:absolute; inset:0; z-index:0; }
+  #hero-bg canvas{ position:absolute; inset:0; width:100%; height:100%; }
+  .hero-figure{
+    position:absolute; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 700px 900px at 78% 55%, rgba(0,229,255,0.05), transparent 60%),
+      radial-gradient(ellipse 500px 700px at 22% 60%, rgba(122,22,32,0.08), transparent 65%);
+  }
+  .corridor-lines{
+    position:absolute; inset:0; z-index:0; opacity:0.35;
+    background-image:repeating-linear-gradient(180deg, transparent 0 3px, rgba(245,247,250,0.015) 3px 4px);
+  }
+  .game-hero-gradient{
+    position:absolute; inset:0; z-index:1;
+    background:
+      linear-gradient(90deg, rgba(3,4,5,0.92) 0%, rgba(3,4,5,0.55) 42%, rgba(3,4,5,0.25) 65%, rgba(3,4,5,0.75) 100%),
+      linear-gradient(180deg, rgba(3,4,5,0.15) 0%, rgba(3,4,5,0.4) 55%, rgba(3,4,5,0.97) 100%);
+  }
+  .game-hero-content{ position:relative; z-index:2; width:100%; padding:0 clamp(20px,5vw,64px) 100px; }
+  .presents-label{
+    font-family:'JetBrains Mono'; font-size:12px; letter-spacing:0.28em; text-transform:uppercase;
+    color:rgba(245,247,250,0.55); margin-bottom:22px; display:flex; align-items:center; gap:12px;
+  }
+  .presents-label .dot{ width:6px; height:6px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); animation:pulse 2.4s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+  h1.game-title{
+    font-size:clamp(46px,10vw,148px); line-height:0.9; font-weight:700; letter-spacing:-0.01em;
+    text-transform:uppercase; max-width:900px;
+  }
+  h1.game-title .silent{ color:var(--white); display:block; }
+  h1.game-title .attendens{
+    display:block;
+    background:linear-gradient(100deg, var(--cyan) 0%, var(--white) 40%, var(--blood-bright) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .game-subtitle{
+    margin-top:26px; font-family:'JetBrains Mono'; font-size:clamp(13px,1.5vw,15px); letter-spacing:0.12em;
+    color:rgba(245,247,250,0.75); max-width:520px; text-transform:uppercase; line-height:1.8;
+  }
+  .game-tags{
+    margin-top:24px; font-family:'JetBrains Mono'; font-size:12px; letter-spacing:0.15em; color:var(--gold); text-transform:uppercase;
+  }
+  .game-hero-actions{ display:flex; gap:18px; margin-top:44px; flex-wrap:wrap; }
+  .cta-btn.ghost-line{ border:1px solid rgba(245,247,250,0.3); background:transparent; }
+  .cta-btn.ghost-line:hover{ border-color:var(--cyan); }
+
+  .scroll-indicator{
+    position:absolute; bottom:34px; left:50%; transform:translateX(-50%); z-index:2;
+    display:flex; flex-direction:column; align-items:center; gap:10px; opacity:.7;
+  }
+  .scroll-indicator .track{ width:1px; height:44px; background:linear-gradient(var(--cyan),transparent); position:relative; overflow:hidden; }
+  .scroll-indicator .track::after{ content:''; position:absolute; top:-20px; left:0; width:1px; height:20px; background:var(--white); animation:scrolldrop 2s ease-in-out infinite; }
+  @keyframes scrolldrop{ 0%{top:-20px;} 100%{top:44px;} }
+
+  /* ---------- STATUS STRIP ---------- */
+  #status-strip{ background:var(--surface); border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:34px 0; }
+  .status-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:20px; }
+  .status-item{ text-align:left; }
+  .status-item .label{ font-family:'JetBrains Mono'; font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:rgba(245,247,250,0.4); }
+  .status-item .value{ margin-top:8px; font-family:'Space Grotesk'; font-size:16px; font-weight:600; }
+  .status-item .value.live{ color:var(--cyan); display:flex; align-items:center; gap:8px; }
+  .status-item .value.live::before{ content:''; width:7px; height:7px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); animation:pulse 2s infinite; }
+  @media (max-width:860px){ .status-grid{ grid-template-columns:repeat(2,1fr); gap:26px 20px; } }
+
+  /* ---------- INTRO ---------- */
+  #intro{ background:var(--bg); }
+  .intro-grid{ display:grid; grid-template-columns:0.9fr 1.1fr; gap:70px; align-items:center; }
+  .intro-visual{
+    position:relative; height:480px; border-radius:18px; overflow:hidden; border:1px solid var(--line);
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(0,229,255,0.10), transparent 55%),
+      radial-gradient(ellipse at 75% 85%, rgba(122,22,32,0.10), transparent 55%),
+      linear-gradient(180deg,#0a0d15,#050608);
+  }
+  .intro-visual::after{
+    content:''; position:absolute; inset:0;
+    background-image:repeating-linear-gradient(90deg, transparent 0 60px, rgba(245,247,250,0.02) 60px 61px);
+  }
+  .intro-visual .frame-tag{
+    position:absolute; bottom:18px; left:18px; font-family:'JetBrains Mono'; font-size:10.5px; letter-spacing:0.1em;
+    color:rgba(245,247,250,0.5); text-transform:uppercase;
+  }
+  .project-tag{
+    margin-top:32px; font-family:'JetBrains Mono'; font-size:11.5px; letter-spacing:0.1em; color:var(--gold);
+    text-transform:uppercase; padding-top:20px; border-top:1px solid var(--line);
+  }
+  @media (max-width:860px){ .intro-grid{ grid-template-columns:1fr; } .intro-visual{ height:320px; } }
+
+  /* ---------- STORY ---------- */
+  #story{
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(0,229,255,0.05), transparent 50%),
+      radial-gradient(ellipse at 85% 70%, rgba(122,22,32,0.06), transparent 55%),
+      #08090f;
+    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  }
+  .story-lines p{
+    font-family:'Space Grotesk'; font-weight:300; font-size:clamp(17px,2.2vw,24px); line-height:1.9;
+    color:rgba(245,247,250,0.8); max-width:640px; margin-bottom:6px;
+  }
+  .story-lines p.emph{ color:var(--white); font-weight:500; }
+  .story-lines p.final{ color:var(--cyan); margin-top:20px; }
+  .story-link{ margin-top:40px; display:inline-flex; align-items:center; gap:10px; font-size:13.5px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:var(--cyan); }
+
+  /* ---------- GAMEPLAY ---------- */
+  #gameplay{ background:var(--bg); }
+  .gameplay-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:22px; }
+  .gameplay-card{
+    border:1px solid var(--line); border-radius:16px; padding:32px 26px; min-height:230px;
+    display:flex; flex-direction:column; justify-content:space-between; transition:border-color .35s ease, transform .35s ease, background .35s ease;
+    background:rgba(245,247,250,0.015);
+  }
+  .gameplay-card:hover{ border-color:rgba(0,229,255,0.35); transform:translateY(-6px); background:rgba(0,229,255,0.03); }
+  .gameplay-num{ font-family:'JetBrains Mono'; font-size:11.5px; color:var(--gold); }
+  .gameplay-name{ font-family:'Space Grotesk'; font-size:20px; font-weight:600; margin-top:22px; }
+  .gameplay-desc{ font-size:13.5px; color:rgba(245,247,250,0.55); margin-top:10px; line-height:1.6; font-weight:300; }
+  @media (max-width:960px){ .gameplay-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:520px){ .gameplay-grid{ grid-template-columns:1fr; } }
+
+  /* ---------- ENTITY ---------- */
+  #entity{ min-height:90vh; display:flex; align-items:center; overflow:hidden; background:#020304; }
+  #entity-bg{ position:absolute; inset:0; z-index:0; }
+  #entity-bg canvas{ position:absolute; inset:0; width:100%; height:100%; }
+  .entity-figure{
+    position:absolute; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 480px 780px at 62% 50%, rgba(0,229,255,0.05), transparent 65%),
+      radial-gradient(ellipse 380px 600px at 62% 50%, rgba(122,22,32,0.10), transparent 70%);
+    filter:blur(1px);
+  }
+  .entity-overlay{
+    position:absolute; inset:0; z-index:1;
+    background:linear-gradient(90deg, rgba(2,3,4,0.94) 0%, rgba(30, 40, 49, 0.55) 45%, rgba(2,3,4,0.85) 100%);
+  }
+  .entity-inner{ position:relative; z-index:2; max-width:560px; }
+  .entity-label{ font-family:'JetBrains Mono'; font-size:12px; letter-spacing:0.24em; color:var(--blood-bright); text-transform:uppercase; margin-bottom:20px; }
+  .entity-title{ font-size:clamp(32px,5.2vw,64px); font-weight:600; line-height:1.05; }
+  .entity-text{ margin-top:24px; font-size:16px; color:rgba(245,247,250,0.65); font-weight:300; line-height:1.8; }
+  .entity-flicker{ animation:flicker 6s infinite; }
+  @keyframes flicker{
+    0%,93%,100%{ opacity:1; }
+    94%{ opacity:0.4; }
+    95%{ opacity:1; }
+    96%{ opacity:0.55; }
+    97%{ opacity:1; }
+  }
+
+  /* ---------- WORLD GALLERY (horizontal) ---------- */
+  #world{ background:var(--surface); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .world-track{ display:flex; gap:20px; overflow-x:auto; padding-bottom:16px; scrollbar-width:thin; }
+  .world-track::-webkit-scrollbar{ height:6px; }
+  .world-card{
+    position:relative; min-width:300px; height:380px; border-radius:14px; overflow:hidden; border:1px solid var(--line);
+    cursor:pointer; flex-shrink:0; transition:border-color .35s ease;
+  }
+  .world-card:hover{ border-color:rgba(0,229,255,0.4); }
+  .world-media{ position:absolute; inset:0; transition:transform .8s cubic-bezier(.16,1,.3,1); }
+  .world-card:hover .world-media{ transform:scale(1.08); }
+  .w1{ background:radial-gradient(circle at 40% 30%,#0e1c2a,#040608 75%); }
+  .w2{ background:radial-gradient(circle at 60% 40%,#150a0d,#040608 75%); }
+  .w3{ background:radial-gradient(circle at 50% 25%,#0e1c2a,#040608 75%); }
+  .w4{ background:radial-gradient(circle at 45% 55%,#151b12,#040608 75%); }
+  .w5{ background:radial-gradient(circle at 55% 35%,#150a0d,#040608 75%); }
+  .w6{ background:radial-gradient(circle at 30% 60%,#0a0e1a,#040608 75%); }
+  .world-overlay{ position:absolute; inset:0; background:linear-gradient(180deg,transparent 45%,rgba(4,6,8,0.95) 100%); }
+  .world-title{ position:absolute; left:20px; bottom:20px; font-family:'Space Grotesk'; font-size:17px; font-weight:600; z-index:2; }
+
+  /* ---------- TRAILER ---------- */
+  #trailer{ background:var(--bg); }
+  .trailer-frame{
+    position:relative; height:min(60vw,560px); border-radius:18px; overflow:hidden; border:1px solid var(--line);
+    background:radial-gradient(ellipse at 50% 50%, rgba(0,229,255,0.06), transparent 60%), #060810;
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px;
+  }
+  .play-btn{
+    width:78px; height:78px; border-radius:50%; border:1px solid rgba(245,247,250,0.35);
+    display:flex; align-items:center; justify-content:center; transition:.35s ease; cursor:pointer;
+  }
+  .play-btn:hover{ border-color:var(--cyan); box-shadow:0 0 30px rgba(0,229,255,0.3); transform:scale(1.06); }
+  .trailer-status{ font-family:'JetBrains Mono'; font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:rgba(245,247,250,0.5); }
+
+  /* ---------- FEATURES ---------- */
+  #features{ background:var(--surface); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .features-grid{ display:grid; grid-template-columns:repeat(4,1fr); border-left:1px solid var(--line); border-top:1px solid var(--line); }
+  .feature-card{
+    border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:36px 28px; min-height:180px;
+    display:flex; flex-direction:column; justify-content:center; gap:10px; transition:background .4s ease;
+  }
+  .feature-card:hover{ background:rgba(0,229,255,0.035); }
+  .feature-name{ font-family:'Space Grotesk'; font-size:16.5px; font-weight:600; transition:color .3s ease; }
+  .feature-card:hover .feature-name{ color:var(--cyan); }
+  @media (max-width:960px){ .features-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:560px){ .features-grid{ grid-template-columns:1fr; } }
+
+  /* ---------- SCREENSHOTS ---------- */
+  #screenshots{ background:var(--bg); }
+  .shot-grid{ display:grid; grid-template-columns:repeat(3,1fr); grid-auto-rows:220px; gap:16px; }
+  .shot{
+    position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--line); cursor:pointer;
+  }
+  .shot:nth-child(1){ grid-column:span 2; grid-row:span 2; }
+  .shot img, .shot .ph{ width:100%; height:100%; object-fit:cover; transition:transform .6s cubic-bezier(.16,1,.3,1); }
+  .shot:hover img, .shot:hover .ph{ transform:scale(1.06); }
+  .s1{ background:radial-gradient(circle at 40% 30%,#0e1c2a,#030405 75%); }
+  .s2{ background:radial-gradient(circle at 60% 40%,#150a0d,#030405 75%); }
+  .s3{ background:radial-gradient(circle at 50% 60%,#0e1c2a,#030405 75%); }
+  .s4{ background:radial-gradient(circle at 45% 45%,#151b12,#030405 75%); }
+  .s5{ background:radial-gradient(circle at 55% 35%,#150a0d,#030405 75%); }
+  @media (max-width:760px){ .shot-grid{ grid-template-columns:repeat(2,1fr); grid-auto-rows:160px; } .shot:nth-child(1){ grid-column:span 2; grid-row:span 1; height:260px; } }
+
+  .lightbox{
+    position:fixed; inset:0; z-index:2000; background:rgba(2,3,4,0.96); backdrop-filter:blur(10px);
+    display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .4s ease;
+  }
+  .lightbox.open{ opacity:1; pointer-events:auto; }
+  .lightbox-inner{ width:min(80vw,900px); height:min(70vh,600px); border-radius:16px; border:1px solid var(--line-strong); }
+  .lightbox-close{ position:absolute; top:30px; right:30px; font-family:'JetBrains Mono'; font-size:13px; letter-spacing:0.1em; color:var(--white); }
+
+  /* ---------- DEVELOPMENT ---------- */
+  #development{ background:var(--surface); border-top:1px solid var(--line); }
+  .dev-tags{ display:flex; flex-wrap:wrap; gap:10px; margin:24px 0 60px; }
+  .dev-tags span{
+    font-family:'JetBrains Mono'; font-size:11.5px; letter-spacing:0.08em; padding:8px 14px; border-radius:100px;
+    border:1px solid var(--line-strong); color:rgba(245,247,250,0.72);
+  }
+  .dev-track{ position:relative; display:flex; overflow-x:auto; padding-bottom:20px; scrollbar-width:none; }
+  .dev-track::-webkit-scrollbar{ display:none; }
+  .dev-step{ min-width:220px; flex:1; padding:34px 26px 0; position:relative; }
+  .dev-line{ position:absolute; top:16px; left:0; right:0; height:1px; background:var(--line-strong); z-index:0; }
+  .dev-node{ width:12px; height:12px; border-radius:50%; background:var(--surface); border:1px solid var(--line-strong); position:relative; z-index:1; }
+  .dev-node.done{ border-color:var(--cyan); box-shadow:0 0 0 4px rgba(0,229,255,0.1); }
+  .dev-node.done::after{ content:''; position:absolute; inset:3px; border-radius:50%; background:var(--cyan); box-shadow:0 0 10px 2px var(--cyan); }
+  .dev-node.active{ border-color:var(--gold); box-shadow:0 0 0 4px rgba(182,141,64,0.12); }
+  .dev-node.active::after{ content:''; position:absolute; inset:3px; border-radius:50%; background:var(--gold); animation:pulse 1.6s infinite; }
+  .dev-num{ font-family:'JetBrains Mono'; font-size:11.5px; color:var(--gold); margin-top:20px; }
+  .dev-name{ font-family:'Space Grotesk'; font-size:17px; font-weight:600; margin-top:6px; }
+  .dev-status{ font-family:'JetBrains Mono'; font-size:10.5px; letter-spacing:0.08em; text-transform:uppercase; margin-top:8px; }
+  .dev-status.done{ color:var(--cyan); }
+  .dev-status.active{ color:var(--gold); }
+  .dev-status.pending{ color:rgba(245,247,250,0.35); }
+
+  /* ---------- STUDIO CONNECTION ---------- */
+  #connection{ background:var(--bg); text-align:center; }
+  .connection-mark{
+    width:56px;height:56px;border-radius:50%; margin:0 auto 26px;
+    background:radial-gradient(circle at 30% 30%, var(--cyan), transparent 60%), radial-gradient(circle at 70% 70%, var(--gold), transparent 60%), #0e1524;
+    border:1px solid var(--line-strong); box-shadow:0 0 20px rgba(0,229,255,0.25);
+  }
+  #connection .section-sub{ margin:18px auto 0; }
+  #connection .cta-btn{ margin-top:36px; }
+
+  /* ---------- FINAL CTA ---------- */
+  #final-cta{ min-height:75vh; display:flex; align-items:center; overflow:hidden; background:#020304; }
+  #final-bg{ position:absolute; inset:0; z-index:0; }
+  #final-bg canvas{ position:absolute; inset:0; width:100%; height:100%; }
+  .final-overlay{
+    position:absolute; inset:0; z-index:1;
+    background:radial-gradient(ellipse at 50% 40%, rgba(0,229,255,0.06), transparent 60%), linear-gradient(180deg, rgba(2,3,4,0.4), rgba(2,3,4,0.96));
+  }
+  .final-inner{ position:relative; z-index:2; text-align:center; margin:0 auto; padding:140px clamp(20px,5vw,64px); }
+  h2.final-title{ font-size:clamp(34px,7vw,80px); line-height:1.02; font-weight:600; text-transform:uppercase; }
+  .final-sub{ margin:24px auto 0; color:rgba(245,247,250,0.6); font-size:16px; font-weight:300; }
+  .final-actions{ display:flex; gap:18px; justify-content:center; margin-top:44px; flex-wrap:wrap; }
+
+  /* ---------- FOOTER (identical to main site) ---------- */
+  footer{ background:#050609; border-top:1px solid var(--line); padding:90px 0 30px; }
+  .footer-top{ display:flex; justify-content:space-between; gap:60px; flex-wrap:wrap; padding-bottom:70px; }
+  .footer-logo{ font-family:'Space Grotesk'; font-size:30px; font-weight:600; }
+  .footer-logo .tamil{ color:var(--cyan); font-size:22px; font-weight:400; margin-left:12px; }
+  .footer-cols{ display:flex; gap:80px; flex-wrap:wrap; }
+  .footer-col h4{ font-family:'JetBrains Mono'; font-size:11.5px; letter-spacing:0.15em; text-transform:uppercase; color:rgba(245,247,250,0.45); margin-bottom:18px; }
+  .footer-col a{ display:block; font-size:14.5px; color:rgba(245,247,250,0.7); margin-bottom:12px; transition:color .25s ease; }
+  .footer-col a:hover{ color:var(--cyan); }
+  .footer-bottom{ display:flex; justify-content:space-between; align-items:center; padding-top:30px; border-top:1px solid var(--line); flex-wrap:wrap; gap:16px; }
+  .footer-bottom .status{ display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono'; font-size:11.5px; color:rgba(245,247,250,0.45); }
+  .footer-bottom .status .dot{ width:6px; height:6px; border-radius:50%; background:#3ddc84; box-shadow:0 0 6px #3ddc84; }
+  .footer-bottom p{ font-size:13px; color:rgba(245,247,250,0.4); }
+
+  a:focus-visible, button:focus-visible{ outline:2px solid var(--cyan); outline-offset:3px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="cursor-glow"></div>
+<div id="cursor-dot"></div>
+<div id="grain"></div>
+<div class="vignette"></div>
+<div id="flicker"></div>
+
+<!-- NAV (unchanged from main site, Projects marked active) -->
+<header id="site-header">
+  <a href="https://aazhystudios.in/" class="logo">
+    <span class="mark" ></span>
+    AAZHY STUDIOS <span class="tamil">ஆழி</span>
+  </a>
+  <nav class="links">
+    <a href="index.html#about">About</a>
+    <a href="index.html#services">Services</a>
+    <a href="index.html#work">Showcase</a>
+    <a href="index.html#work" class="active">Projects</a>
+    <a href="index.html#team">Team</a>
+    <a href="index.html#contact">Contact</a>
+    <a href="index.html#contact">Join Us</a>
+  </nav>
+  <a href="index.html#contact" class="cta-btn solid desktop-only magnetic">Start a Project →</a>
+  <button id="menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<div class="breadcrumb" id="breadcrumb">
+  <a href="index.html#hero">Aazhy Studios</a> / <a href="index.html#work">Projects</a> / Silent Attendens
+</div>
+
+<div class="mobile-panel" id="mobile-panel">
+  <a href="index.html#about"><span>01</span>About</a>
+  <a href="index.html#services"><span>02</span>Services</a>
+  <a href="index.html#work"><span>03</span>Showcase</a>
+  <a href="index.html#work"><span>04</span>Projects</a>
+  <a href="index.html#team"><span>05</span>Team</a>
+  <a href="index.html#contact"><span>06</span>Contact</a>
+  <a href="index.html#contact"><span>07</span>Join Us</a>
+</div>
+
+<!-- GAME HERO -->
+<section id="game-hero">
+  <div id="hero-bg"><canvas id="fog-canvas-hero"></canvas></div>
+  <div class="hero-figure"></div>
+  <div class="corridor-lines"></div>
+  <div class="game-hero-gradient"></div>
+  <div class="game-hero-content">
+    <div class="presents-label"><span class="dot"></span>AAZHY STUDIOS PRESENTS</div>
+    <h1 class="game-title glitch" data-text="SILENT ATTENDENS">
+      <span class="silent">SILENT</span><span class="attendens">ATTENDENS</span>
+    </h1>
+    <p class="game-subtitle">If you hear your name...<br>don't answer.</p>
+    <img src="silent attedens poster.png" style="width:100%;height:100%;object-fit:cover;">
+    <div class="game-tags">HORROR • MYSTERY • SURVIVAL</div>
+    <div class="game-hero-actions">
+      <button class="cta-btn solid magnetic" id="watch-trailer-btn">Watch Trailer</button>
+      <a href="#intro" class="cta-btn ghost-line magnetic">Explore the Game</a>
+    </div>
+  </div>
+  <div class="scroll-indicator">
+    <span class="mono" style="font-size:10px; color:rgb(254, 3, 3);">SCROLL TO EXPLORE ↓</span>
+    <div class="track"></div>
+  </div>
+</section>
+
+<!-- STATUS STRIP -->
+<section id="status-strip">
+  <div class="section-inner">
+    <div class="status-grid">
+      <div class="status-item reveal"><div class="label">Status</div><div class="value live" style="color: red;">Coming Soon</div></div>
+      <div class="status-item reveal reveal-delay-1"><div class="label">Genre</div><div class="value" style="color: red;">Horror / Mystery / Survival</div></div>
+      <div class="status-item reveal reveal-delay-2"><div class="label">Platform</div><div class="value" style="color: red;">PC</div></div>
+      <div class="status-item reveal reveal-delay-3"><div class="label">Developer</div><div class="value" style="color: red;">Aazhy Studios</div></div>
+      <div class="status-item reveal"><div class="label">Engine</div><div class="value live" style="color: red;">Unity / Unreal Engine</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- INTRO -->
+<section id="intro" class="section-pad">
+  <div class="section-inner">
+    <div class="intro-grid">
+      <div class="intro-visual reveal">
+        <img src="silent attedens poster.png" style="width:100%;height:100%;object-fit:cover;">
+        <span class="frame-tag mono">FIG. 01 / HOSTEL HOSTEL</span>
+      </div>
+      <div class="reveal reveal-delay-1">
+        <div class="eyebrow">— The Story</div>
+        <h2 class="section-title" style="font-size:clamp(28px,4vw,44px);">SOME PLACES<br>SHOULD NEVER BE ENTERED.</h2>
+        <p class="hero-sub" style="margin-top:22px; font-size:16.5px; line-height:1.75; color:rgba(255, 0, 0, 0.7); font-weight:300; max-width:520px;">
+          Silent Attendens is a psychological horror mystery set inside a haunted Indian college hostel.
+        </p>
+        <p class="hero-sub" style="margin-top:16px; font-size:16.5px; line-height:1.75; color:rgba(255, 0, 0, 0.7); font-weight:300; max-width:520px;">
+          The player explores abandoned corridors, discovers hidden stories, investigates mysterious disappearances and tries to survive an entity that should never be awakened.
+        </p>
+        <p class="hero-sub" style="margin-top:16px; font-size:14.5px; color:rgba(255, 0, 0, 0.5); font-weight:300; max-width:520px;">
+          The environment is rooted in Indian hostel culture — rather than generic Western horror.
+        </p>
+        <div class="project-tag">PROJECT / SILENT ATTENDENS</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STORY -->
+<section id="story" class="section-pad">
+  <div class="section-inner">
+    <div class="eyebrow reveal">— Story</div>
+    <h2 class="section-title reveal" style="margin-bottom:50px;">THE HOSTEL REMEMBERS.</h2>
+    <div class="story-lines reveal reveal-delay-1">
+      <p>A student enters an abandoned hostel where something feels wrong.</p>
+      <p>Rooms that should be empty are not.</p>
+      <p>Footsteps appear behind you.</p>
+      <p class="emph">Names are whispered from dark corridors.</p>
+      <p>Old photographs reveal forgotten events.</p>
+      <p class="final">And somewhere inside the building... something is waiting.</p>
+    </div>
+    <a href="#entity" class="story-link reveal reveal-delay-2">Discover the Truth <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+  </div>
+</section>
+
+<!-- GAMEPLAY -->
+<section id="gameplay" class="section-pad">
+  <div class="section-inner">
+    <div class="title-row reveal">
+      <div>
+        <div class="eyebrow">— Gameplay</div>
+        <h2 class="section-title">SURVIVE THE<br>SILENCE.</h2>
+      </div>
+    </div>
+    <div class="gameplay-grid">
+      <div class="gameplay-card reveal">
+        <div class="gameplay-num">01</div>
+        <div><div class="gameplay-name">Explore</div><div class="gameplay-desc">Search abandoned hostel rooms, corridors and hidden areas.</div></div>
+      </div>
+      <div class="gameplay-card reveal reveal-delay-1">
+        <div class="gameplay-num">02</div>
+        <div><div class="gameplay-name">Investigate</div><div class="gameplay-desc">Find clues, documents, photographs and objects that reveal the mystery.</div></div>
+      </div>
+      <div class="gameplay-card reveal reveal-delay-2">
+        <div class="gameplay-num">03</div>
+        <div><div class="gameplay-name">Hide</div><div class="gameplay-desc">The entity is watching. Know when to run and when to stay silent.</div></div>
+      </div>
+      <div class="gameplay-card reveal reveal-delay-3">
+        <div class="gameplay-num">04</div>
+        <div><div class="gameplay-name">Survive</div><div class="gameplay-desc">Your decisions determine how the night unfolds.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ENTITY -->
+<section id="entity">
+  <div id="entity-bg"><canvas id="fog-canvas-entity"></canvas></div>
+  <div class="entity-figure"></div>
+  <div class="entity-overlay"></div>
+  <div class="section-inner">
+    <div class="entity-inner reveal">
+      <div class="entity-label">Unknown Entity</div>
+      <h2 class="entity-title entity-flicker">SOMETHING IS<br>WATCHING.</h2>
+      <p class="entity-text">You don't always see it.<br>Sometimes you only hear it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- WORLD GALLERY -->
+<section id="world" class="section-pad">
+  <div class="section-inner">
+    <div class="title-row reveal">
+      <div>
+        <div class="eyebrow">— The World</div>
+        <h2 class="section-title">WELCOME TO<br>THE HOSTEL.</h2>
+      </div>
+    </div>
+  </div>
+  <div class="section-inner">
+    <div class="world-track reveal">
+      <div class="world-card"><div class="world-media w1"></div><div class="world-overlay"></div><div class="world-title">Hostel Corridor</div></div>
+      <div class="world-card"><div class="world-media w2"></div><div class="world-overlay"></div><div class="world-title">Abandoned Room</div></div>
+      <div class="world-card"><div class="world-media w3"></div><div class="world-overlay"></div><div class="world-title">Staircase</div></div>
+      <div class="world-card"><div class="world-media w4"></div><div class="world-overlay"></div><div class="world-title">Common Area</div></div>
+      <div class="world-card"><div class="world-media w5"></div><div class="world-overlay"></div><div class="world-title">Hidden Room</div></div>
+      <div class="world-card"><div class="world-media w6"></div><div class="world-overlay"></div><div class="world-title">Night Exterior</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TRAILER -->
+<section id="trailer" class="section-pad">
+  <div class="section-inner">
+    <div class="title-row reveal">
+      <div>
+        <div class="eyebrow">— Trailer</div>
+        <h2 class="section-title" style="font-size:clamp(28px,4vw,44px);">WATCH THE TRAILER</h2>
+      </div>
+    </div>
+    <div class="trailer-frame reveal" id="trailer-frame">
+      <div class="play-btn" id="play-btn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#F5F7FA"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+      <div class="trailer-status">TRAILER COMING SOON</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="section-pad">
+  <div class="section-inner">
+    <div class="title-row reveal">
+      <div>
+        <div class="eyebrow">— Features</div>
+        <h2 class="section-title">BUILT FOR IMMERSION</h2>
+      </div>
+    </div>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card reveal"><div class="feature-name">Atmospheric Horror</div></div>
+    <div class="feature-card reveal"><div class="feature-name">Indian Cultural Setting</div></div>
+    <div class="feature-card reveal"><div class="feature-name">Environmental Storytelling</div></div>
+    <div class="feature-card reveal"><div class="feature-name">Psychological Mystery</div></div>
+    <div class="feature-card reveal"><div class="feature-name">Exploration</div></div>
+    <div class="feature-card reveal"><div class="feature-name">Survival Mechanics</div></div>
+    <div class="feature-card reveal"><div class="feature-name">Cinematic Audio</div></div>
+    <div class="feature-card reveal"><div class="feature-name">Dynamic Lighting</div></div>
+  </div>
+</section>
+
+<!-- SCREENSHOTS -->
+<section id="screenshots" class="section-pad">
+  <div class="section-inner">
+    <div class="title-row reveal">
+      <div>
+        <div class="eyebrow">— Gallery</div>
+        <h2 class="section-title">FROM THE SHADOWS</h2>
+      </div>
+    </div>
+    <div class="shot-grid reveal">
+      <div class="shot" data-shot="1"><div class="ph s1"></div></div>
+      <div class="shot" data-shot="2"><div class="ph s2"></div></div>
+      <div class="shot" data-shot="3"><div class="ph s3"></div></div>
+      <div class="shot" data-shot="4"><div class="ph s4"></div></div>
+      <div class="shot" data-shot="5"><div class="ph s5"></div></div>
+    </div>
+  </div>
+</section>
+
+<div class="lightbox" id="lightbox">
+  <span class="lightbox-close" id="lightbox-close">CLOSE ✕</span>
+  <div class="lightbox-inner" id="lightbox-inner" style="background:radial-gradient(circle at 40% 30%,#0e1c2a,#030405 75%);"></div>
+</div>
+
+<!-- DEVELOPMENT -->
+<section id="development" class="section-pad">
+  <div class="section-inner">
+    <div class="title-row reveal">
+      <div>
+        <div class="eyebrow">— Behind the Game</div>
+        <h2 class="section-title" style="font-size:clamp(28px,4vw,44px);">BEHIND THE GAME</h2>
+        <p class="section-sub">Silent Attendens is being developed in-house by Aazhy Studios.</p>
+      </div>
+    </div>
+    <div class="dev-tags reveal">
+      <span>DESIGN</span><span>GAMEPLAY</span><span>PROGRAMMING</span><span>ART</span><span>AUDIO</span><span>WORLD BUILDING</span>
+    </div>
+    <div class="dev-track reveal">
+      <div class="dev-line"></div>
+      <div class="dev-step"><div class="dev-node done"></div><div class="dev-num">01</div><div class="dev-name">Concept</div><div class="dev-status done">Complete</div></div>
+      <div class="dev-step"><div class="dev-node done"></div><div class="dev-num">02</div><div class="dev-name">World Building</div><div class="dev-status done">Complete</div></div>
+      <div class="dev-step"><div class="dev-node active"></div><div class="dev-num">03</div><div class="dev-name">Prototype</div><div class="dev-status active">In Progress</div></div>
+      <div class="dev-step"><div class="dev-node"></div><div class="dev-num">04</div><div class="dev-name">Development</div><div class="dev-status pending">Upcoming</div></div>
+      <div class="dev-step"><div class="dev-node"></div><div class="dev-num">05</div><div class="dev-name">Testing</div><div class="dev-status pending">Upcoming</div></div>
+      <div class="dev-step"><div class="dev-node"></div><div class="dev-num">06</div><div class="dev-name">Release</div><div class="dev-status pending">Upcoming</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- STUDIO CONNECTION -->
+<section id="connection" class="section-pad">
+  <div class="section-inner reveal">
+    <div class="connection-mark"></div>
+    <div class="eyebrow" style="justify-content:center;">A Game by Aazhy Studios</div>
+    <h2 class="section-title" style="margin:0 auto; font-size:clamp(26px,4vw,40px);">Explore more worlds created by Aazhy Studios.</h2>
+    <a href="http://aazhystudios.in/" class="cta-btn solid magnetic">Back to Projects →</a>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section id="final-cta">
+  <div id="final-bg"><canvas id="fog-canvas-final"></canvas></div>
+  <div class="final-overlay"></div>
+  <div class="final-inner">
+    <div class="reveal">
+      <h2 class="final-title">ARE YOU READY<br>TO ENTER?</h2>
+      <p class="final-sub">The night is waiting.</p>
+      <div class="final-actions">
+        <a href="index.html#contact" class="cta-btn solid magnetic">Follow the Project</a>
+        <a href="http://aazhystudios.in/" class="cta-btn magnetic">Back to Aazhy Studios</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER (identical to main site) -->
+<footer>
+  <div class="section-inner">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo" style="color: #30aada;">AAZHY STUDIOS <span class="tamil">ஆழி</span></div>
+        <p style="max-width:280px; margin-top:18px; font-size:14px; color:rgba(245,247,250,0.5); font-weight:300;">A creative technology studio from India, building brands and worlds worth remembering.</p>
+      </div>
+      <div class="footer-cols">
+        <div class="footer-col">
+          <h4>Studio</h4>
+          <a href="http://aazhystudios.in/">Home</a>
+          <a href="index.html#work">Work</a>
+          <a href="index.html#services">Services</a>
+          <a href="index.html#about">About</a>
+        </div>
+        <div class="footer-col">
+          <h4>Connect</h4>
+          <a href="index.html#team">Team</a>
+          <a href="index.html#blog">Blog</a>
+          <a href="index.html#contact">Contact</a>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p style="color: #4a4caa;">© 2026 Aazhy Studios. All rights reserved.</p>
+      <div class="status"><span class="dot"></span>SYSTEM STATUS: ONLINE</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ---------------- header scroll state + breadcrumb visibility ---------------- */
+const header = document.getElementById('site-header');
+const breadcrumb = document.getElementById('breadcrumb');
+window.addEventListener('scroll', () => {
+  const scrolled = window.scrollY > 40;
+  header.classList.toggle('scrolled', scrolled);
+  breadcrumb.classList.toggle('hide', window.scrollY < window.innerHeight * 0.6);
+}, { passive:true });
+
+/* ---------------- mobile menu ---------------- */
+const menuToggle = document.getElementById('menu-toggle');
+const mobilePanel = document.getElementById('mobile-panel');
+menuToggle.addEventListener('click', ()=>{
+  const open = mobilePanel.classList.toggle('open');
+  menuToggle.classList.toggle('open', open);
+  menuToggle.setAttribute('aria-expanded', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+});
+mobilePanel.querySelectorAll('a').forEach(a=>a.addEventListener('click', ()=>{
+  mobilePanel.classList.remove('open'); menuToggle.classList.remove('open');
+  document.body.style.overflow = '';
+}));
+
+/* ---------------- reveal on scroll ---------------- */
+const revealEls = document.querySelectorAll('.reveal');
+const revealObserver = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){ entry.target.classList.add('in'); revealObserver.unobserve(entry.target); }
+  });
+}, { threshold:0.15 });
+revealEls.forEach(el=>revealObserver.observe(el));
+
+/* ---------------- cursor glow + dot ---------------- */
+const glow = document.getElementById('cursor-glow');
+const dot = document.getElementById('cursor-dot');
+let mx=innerWidth/2, my=innerHeight/2, gx=mx, gy=my;
+window.addEventListener('mousemove', e=>{
+  mx = e.clientX; my = e.clientY;
+  dot.style.transform = `translate(${mx}px, ${my}px) translate(-50%,-50%)`;
+});
+function animGlow(){
+  gx += (mx-gx)*0.09; gy += (my-gy)*0.09;
+  glow.style.transform = `translate(${gx}px, ${gy}px) translate(-50%,-50%)`;
+  requestAnimationFrame(animGlow);
+}
+animGlow();
+document.querySelectorAll('a,button').forEach(el=>{
+  el.addEventListener('mouseenter', ()=>{ dot.style.background='var(--gold)'; });
+  el.addEventListener('mouseleave', ()=>{ dot.style.background='var(--cyan)'; });
+});
+
+/* ---------------- magnetic buttons ---------------- */
+document.querySelectorAll('.magnetic').forEach(btn=>{
+  btn.addEventListener('mousemove', e=>{
+    const r = btn.getBoundingClientRect();
+    const relX = e.clientX - r.left - r.width/2;
+    const relY = e.clientY - r.top - r.height/2;
+    btn.style.transform = `translate(${relX*0.28}px, ${relY*0.32}px)`;
+  });
+  btn.addEventListener('mouseleave', ()=>{ btn.style.transform = 'translate(0,0)'; });
+});
+
+/* ---------------- fog / particle canvas ---------------- */
+function initFog(canvasId, opts={}){
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let w,h,particles=[];
+  const count = opts.count || 40;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function resize(){ w = canvas.width = canvas.offsetWidth * devicePixelRatio; h = canvas.height = canvas.offsetHeight * devicePixelRatio; }
+  function makeParticle(){
+    return {
+      x: Math.random()*w, y: Math.random()*h,
+      r: (Math.random()*160+80) * devicePixelRatio,
+      vx: (Math.random()-0.5)*0.1*devicePixelRatio,
+      vy: (Math.random()-0.4)*0.04*devicePixelRatio,
+      a: Math.random()*0.045+0.015,
+      hue: Math.random() > 0.85 ? 'blood' : 'cyan'
+    };
+  }
+  function init(){ resize(); particles = Array.from({length:count}, makeParticle); }
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    particles.forEach(p=>{
+      p.x += p.vx; p.y += p.vy;
+      if(p.x < -p.r) p.x = w+p.r; if(p.x > w+p.r) p.x = -p.r;
+      if(p.y < -p.r) p.y = h+p.r; if(p.y > h+p.r) p.y = -p.r;
+      const grad = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+      const color = p.hue === 'blood' ? '122,22,32' : '0,229,255';
+      grad.addColorStop(0, `rgba(${color},${p.a})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+    });
+    if(!reduced) requestAnimationFrame(draw);
+  }
+  init(); window.addEventListener('resize', init); draw();
+}
+initFog('fog-canvas-hero', { count:44 });
+initFog('fog-canvas-entity', { count:26 });
+initFog('fog-canvas-final', { count:30 });
+
+/* ---------------- hero parallax ---------------- */
+const gameHeroContent = document.querySelector('.game-hero-content');
+window.addEventListener('scroll', ()=>{
+  const y = window.scrollY;
+  if(y < window.innerHeight){
+    gameHeroContent.style.transform = `translateY(${y*0.16}px)`;
+    gameHeroContent.style.opacity = String(Math.max(0, 1 - y/520));
+  }
+}, { passive:true });
+
+/* ---------------- occasional flicker (very subtle, non-jumpscare) ---------------- */
+const flickerLayer = document.getElementById('flicker');
+function scheduleFlicker(){
+  const delay = 9000 + Math.random()*14000;
+  setTimeout(()=>{
+    flickerLayer.style.transition = 'opacity 90ms ease';
+    flickerLayer.style.opacity = '0.06';
+    setTimeout(()=>{ flickerLayer.style.opacity = '0'; }, 90);
+    scheduleFlicker();
+  }, delay);
+}
+if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches) scheduleFlicker();
+
+/* ---------------- trailer play (coming soon state) ---------------- */
+document.getElementById('play-btn').addEventListener('click', ()=>{
+  const status = document.querySelector('.trailer-status');
+  status.textContent = 'TRAILER NOT YET RELEASED — FOLLOW AAZHY STUDIOS FOR UPDATES';
+});
+document.getElementById('watch-trailer-btn').addEventListener('click', ()=>{
+  document.getElementById('trailer').scrollIntoView({ behavior:'smooth' });
+});
+
+/* ---------------- screenshot lightbox ---------------- */
+const lightbox = document.getElementById('lightbox');
+const lightboxInner = document.getElementById('lightbox-inner');
+const shotBgClasses = ['s1','s2','s3','s4','s5'];
+document.querySelectorAll('.shot').forEach((shot, i)=>{
+  shot.addEventListener('click', ()=>{
+    lightboxInner.className = '';
+    lightboxInner.style.background = getComputedStyle(shot.querySelector('.ph')).backgroundImage;
+    const ph = shot.querySelector('.ph');
+    lightboxInner.style.cssText = 'width:min(80vw,900px);height:min(70vh,600px);border-radius:16px;border:1px solid rgba(245,247,250,0.14);' + getComputedStyle(ph).cssText;
+    lightboxInner.style.background = window.getComputedStyle(ph).background;
+    lightbox.classList.add('open');
+  });
+});
+document.getElementById('lightbox-close').addEventListener('click', ()=> lightbox.classList.remove('open'));
+lightbox.addEventListener('click', (e)=>{ if(e.target === lightbox) lightbox.classList.remove('open'); });
+</script>
+</body>
+</html>
